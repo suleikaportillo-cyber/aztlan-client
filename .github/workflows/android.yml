@@ -26,12 +26,18 @@ jobs:
         yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --licenses || true
         $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --install "ndk;29.0.13599879" "platforms;android-33" "cmake;3.22.1"
 
+    - name: Build LuaJIT and Android Dependencies
+      run: |
+        chmod +x build_luajit_android.sh
+        export ANDROID_NDK_HOME=/usr/local/lib/android/sdk/ndk/29.0.13599879
+        ./build_luajit_android.sh || true
+
     - name: Build Android APK with Gradle
       run: |
         unzip android.zip
         cd android
         chmod +x gradlew
-        ./gradlew assembleDebug --info
+        ./gradlew assembleDebug
 
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
