@@ -34,33 +34,33 @@ jobs:
         export ANDROID_NDK_HOME=/usr/local/lib/android/sdk/ndk/29.0.13599879
         ./build_luajit_android.sh || true
 
-    - name: Unzip and Purge Vcpkg Arguments from Gradle
+    - name: Unzip and Overwrite External Native Build Arguments
       run: |
         unzip -q android.zip
         python3 -c '
-        import os, re
+        import os
         target_file = "android/app/build.gradle"
         if os.path.exists(target_file):
             with open(target_file, "r", encoding="utf-8", errors="ignore") as f:
                 content = f.read()
             
-            # Eliminamos cualquier argumento de CMake relacionado con VCPKG
-            new_content = re.sub(r"\"-DVCPKG[^\"]*\"", "", content)
-            new_content = re.sub(r"\x27-DVCPKG[^\x27]*\x27", "", new_content)
-            new_content = re.sub(r"-DVCPKG[^\s,\"]*", "", new_content)
-            
-            with open(target_file, "w", encoding="utf-8") as f:
-                f.write(new_content)
-            print("Successfully purged all VCPKG arguments from android/app/build.gradle")
-        else:
-            print("Warning: android/app/build.gradle not found!")
+            # Reemplazamos todo el bloque de arguments de CMake para asegurarnos de limpiar vcpkg
+            if "externalNativeBuild" in content:
+                # Buscamos y limpiamos las referencias de vcpkg en los argumentos
+                cleaned = content.replace("VCPKG_TARGET_ANDROID=ON", "VCPKG_TARGET_ANDROID=OFF")
+                cleaned = cleaned.replace("VCPKG_MANIFEST_INSTALL=ON", "VCPKG_MANIFEST_INSTALL=OFF")
+                cleaned = cleaned.replace("-DVCPKG", "#-DVCPKG")
+                
+                with open(target_file, "w", encoding="utf-8") as f:
+                    f.write(cleaned)
+                print("Overwrote CMake arguments in android/app/build.gradle")
         '
 
     - name: Build Android APK with Gradle
       run: |
         cd android
         chmod +x gradlew
-        ./gradlew assembleDebug
+        ./gradlew assembleDebug -Pandroid.injected.build.model.only=false
 
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
