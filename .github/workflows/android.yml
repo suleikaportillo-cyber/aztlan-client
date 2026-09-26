@@ -34,34 +34,37 @@ jobs:
         export ANDROID_NDK_HOME=/usr/local/lib/android/sdk/ndk/29.0.13599879
         ./build_luajit_android.sh || true
 
-    - name: Unzip and Globally Force Off Vcpkg Manifest
+    - name: Unzip and Purge Vcpkg Manifest Globally
       run: |
         unzip -q android.zip
         python3 -c '
         import glob, re
-        for filepath in glob.glob("**/*", recursive=True):
-            if any(p in filepath for p in [".git", "build", ".gradle", "node_modules"]):
-                continue
-            try:
-                with open(filepath, "r", encoding="utf-8", errors="ignore") as f:
-                    content = f.read()
-                
-                # Reemplazo estricto usando expresiones regulares para apagar vcpkg manifest
-                new_content = re.sub(r"VCPKG_MANIFEST_INSTALL\s*=\s*ON", "VCPKG_MANIFEST_INSTALL=OFF", content, flags=re.IGNORECASE)
-                
-                if new_content != content:
-                    with open(filepath, "w", encoding="utf-8") as f:
-                        f.write(new_content)
-                    print(f"Patched globally: {filepath}")
-            except Exception:
-                pass
+        # Buscamos en todos los archivos de texto del proyecto
+        extensions = ["*.txt", "*.json", "*.gradle", "*.properties", "*.cmake", "*.sh"]
+        for ext in extensions:
+            for filepath in glob.glob("**/" + ext, recursive=True):
+                if any(p in filepath for p in [".git", "build", ".gradle", "node_modules"]):
+                    continue
+                try:
+                    with open(filepath, "r", encoding="utf-8", errors="ignore") as f:
+                        content = f.read()
+                    
+                    # Reemplazamos cualquier variante de ON por OFF
+                    new_content = re.sub(r"VCPKG_MANIFEST_INSTALL\s*=\s*(ON|TRUE)", "VCPKG_MANIFEST_INSTALL=OFF", content, flags=re.IGNORECASE)
+                    
+                    if new_content != content:
+                        with open(filepath, "w", encoding="utf-8") as f:
+                            f.write(new_content)
+                        print(f"Purged vcpkg in: {filepath}")
+                except Exception:
+                    pass
         '
 
     - name: Build Android APK with Gradle
       run: |
         cd android
         chmod +x gradlew
-        ./gradlew assembleDebug
+        ./gradlew assembleDebug -DVCPKG_MANIFEST_INSTALL=OFF
 
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
