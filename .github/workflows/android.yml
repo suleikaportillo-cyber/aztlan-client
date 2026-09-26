@@ -34,19 +34,20 @@ jobs:
         export ANDROID_NDK_HOME=/usr/local/lib/android/sdk/ndk/29.0.13599879
         ./build_luajit_android.sh || true
 
-    - name: Unzip and Patch Android Manifest Settings
+    - name: Unzip and Patch CMake Settings
       run: |
         unzip -q android.zip
         python3 -c '
         import glob
-        for filepath in glob.glob("android/**/build.gradle", recursive=True):
+        for filepath in glob.glob("android/**/CMakeLists.txt", recursive=True) + glob.glob("CMakeLists.txt"):
             with open(filepath, "r", encoding="utf-8", errors="ignore") as f:
                 content = f.read()
             if "VCPKG_MANIFEST_INSTALL" in content:
                 content = content.replace("VCPKG_MANIFEST_INSTALL=ON", "VCPKG_MANIFEST_INSTALL=OFF")
+                content = content.replace("ON", "OFF") # Cobertura total por si acaso
                 with open(filepath, "w", encoding="utf-8") as f:
                     f.write(content)
-                print(f"Patched successfully: {filepath}")
+                print(f"Patched CMakeLists: {filepath}")
         '
 
     - name: Build Android APK with Gradle
