@@ -23,7 +23,7 @@ jobs:
 
     - name: Install dependencies (Ninja & SDK Tools)
       run: |
-        sudo apt-get update && sudo apt-get install -y ninja-build curl unzip tar pkg-config
+        sudo apt-get update && sudo apt-get install -y ninja-build curl unzip tar pkg-config python3
         export ANDROID_SDK_ROOT=/usr/local/lib/android/sdk
         yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --licenses || true
         $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --install "ndk;29.0.13599879" "platforms;android-33" "cmake;3.22.1"
@@ -34,10 +34,20 @@ jobs:
         export ANDROID_NDK_HOME=/usr/local/lib/android/sdk/ndk/29.0.13599879
         ./build_luajit_android.sh || true
 
-    - name: Patch Vcpkg Manifest Setting
+    - name: Unzip and Patch Android Manifest Settings
       run: |
-        unzip android.zip
-        find android -name "build.gradle" -exec sed -i 's/DVCPKG_MANIFEST_INSTALL=ON/DVCPKG_MANIFEST_INSTALL=OFF/g' {} +
+        unzip -q android.zip
+        python3 -c '
+        import glob
+        for filepath in glob.glob("android/**/build.gradle", recursive=True):
+            with open(filepath, "r", encoding="utf-8", errors="ignore") as f:
+                content = f.read()
+            if "VCPKG_MANIFEST_INSTALL" in content:
+                content = content.replace("VCPKG_MANIFEST_INSTALL=ON", "VCPKG_MANIFEST_INSTALL=OFF")
+                with open(filepath, "w", encoding="utf-8") as f:
+                    f.write(content)
+                print(f"Patched successfully: {filepath}")
+        '
 
     - name: Build Android APK with Gradle
       run: |
