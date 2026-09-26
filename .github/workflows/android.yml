@@ -34,7 +34,7 @@ jobs:
         export ANDROID_NDK_HOME=/usr/local/lib/android/sdk/ndk/29.0.13599879
         ./build_luajit_android.sh || true
 
-    - name: Unzip and Force Patch App Gradle Settings
+    - name: Unzip and Remove Vcpkg Arguments from Gradle
       run: |
         unzip -q android.zip
         python3 -c '
@@ -42,15 +42,19 @@ jobs:
         target_file = "android/app/build.gradle"
         if os.path.exists(target_file):
             with open(target_file, "r", encoding="utf-8", errors="ignore") as f:
-                content = f.read()
-            # Reemplazamos cualquier instancia de vcpkg manifest ON por OFF
-            content = content.replace("VCPKG_MANIFEST_INSTALL=ON", "VCPKG_MANIFEST_INSTALL=OFF")
-            content = content.replace("vcpkg.cmake", "") # Limpiamos integraciones problemáticas si es necesario
+                lines = f.readlines()
+            
+            new_lines = []
+            for line in lines:
+                # Omitimos cualquier línea que agregue argumentos de vcpkg que rompen la compilación en Android
+                if "VCPKG_MANIFEST_INSTALL" in line or "vcpkg.cmake" in line:
+                    print(f"Stripping line: {line.strip()}")
+                    continue
+                new_lines.append(line)
+                
             with open(target_file, "w", encoding="utf-8") as f:
-                f.write(content)
-            print("Successfully patched android/app/build.gradle")
-        else:
-            print("Warning: android/app/build.gradle not found!")
+                f.writelines(new_lines)
+            print("Successfully stripped vcpkg flags from android/app/build.gradle")
         '
 
     - name: Build Android APK with Gradle
