@@ -49,10 +49,7 @@ jobs:
                         content = f.read()
                     
                     if "VCPKG" in content:
-                        new_content = re.sub(r"VCPKG_TARGET_ANDROID\s*=\s*ON", "VCPKG_TARGET_ANDROID=OFF", content, flags=re.IGNORECASE)
-                        new_content = re.sub(r"VCPKG_MANIFEST_INSTALL\s*=\s*ON", "VCPKG_MANIFEST_INSTALL=OFF", new_content, flags=re.IGNORECASE)
-                        new_content = re.sub(r"-DVCPKG[^\s,\"]*", "", new_content)
-                        
+                        new_content = re.sub(r"VCPKG[^\s,\"]*", "", content, flags=re.IGNORECASE)
                         if new_content != content:
                             with open(filepath, "w", encoding="utf-8") as f:
                                 f.write(new_content)
@@ -65,7 +62,7 @@ jobs:
       run: |
         cd android
         chmod +x gradlew
-        ./gradlew clean assembleDebug
+        ./gradlew clean assembleDebug -Pandroid.injected.build.model.only=false
 
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
