@@ -34,7 +34,7 @@ jobs:
         export ANDROID_NDK_HOME=/usr/local/lib/android/sdk/ndk/29.0.13599879
         ./build_luajit_android.sh || true
 
-    - name: Unzip and Deep-Clean Vcpkg Manifest Flags
+    - name: Unzip and Clean Android Project Configs
       run: |
         unzip -q android.zip
         python3 -c '
@@ -45,20 +45,11 @@ jobs:
                 try:
                     with open(filepath, "r", encoding="utf-8", errors="ignore") as f:
                         content = f.read()
-                    
-                    if "VCPKG_MANIFEST_INSTALL" in content:
-                        # Reemplazamos cualquier variante de ON por OFF
-                        new_content = content.replace("VCPKG_MANIFEST_INSTALL=ON", "VCPKG_MANIFEST_INSTALL=OFF")
-                        new_content = new_content.replace("VCPKG_MANIFEST_INSTALL = ON", "VCPKG_MANIFEST_INSTALL=OFF")
-                        
-                        # Si persiste como línea independiente, la filtramos
-                        lines = new_content.splitlines()
-                        filtered_lines = [l for l in lines if "VCPKG_MANIFEST_INSTALL" not in l or "OFF" in l]
-                        final_content = "\n".join(filtered_lines)
-                        
+                    if "vcpkg.cmake" in content or "VCPKG" in content:
+                        content = content.replace("vcpkg.cmake", "")
                         with open(filepath, "w", encoding="utf-8") as f:
-                            f.write(final_content)
-                        print(f"Deep-cleaned vcpkg flags in: {filepath}")
+                            f.write(content)
+                        print(f"Cleaned vcpkg reference in: {filepath}")
                 except Exception:
                     pass
         '
@@ -67,7 +58,7 @@ jobs:
       run: |
         cd android
         chmod +x gradlew
-        ./gradlew assembleDebug
+        ./gradlew assembleDebug -Pandroid.injected.invoked.from.ide=true
 
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
