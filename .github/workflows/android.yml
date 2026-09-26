@@ -34,12 +34,16 @@ jobs:
         export ANDROID_NDK_HOME=/usr/local/lib/android/sdk/ndk/29.0.13599879
         ./build_luajit_android.sh || true
 
-    - name: Build Android APK with Gradle
+    - name: Patch Vcpkg Manifest Setting
       run: |
         unzip android.zip
+        find android -name "build.gradle" -exec sed -i 's/DVCPKG_MANIFEST_INSTALL=ON/DVCPKG_MANIFEST_INSTALL=OFF/g' {} +
+
+    - name: Build Android APK with Gradle
+      run: |
         cd android
         chmod +x gradlew
-        ./gradlew assembleDebug -DVCPKG_MANIFEST_INSTALL=OFF
+        ./gradlew assembleDebug
 
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
