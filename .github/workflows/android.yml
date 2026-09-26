@@ -19,6 +19,10 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
+    - name: Accept Android SDK Licenses
+      run: |
+        echo y | sdkmanager --licenses || true
+
     - name: Build Android APK with Gradle
       run: |
         unzip android.zip
