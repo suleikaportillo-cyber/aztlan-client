@@ -34,30 +34,24 @@ jobs:
         export ANDROID_NDK_HOME=/usr/local/lib/android/sdk/ndk/29.0.13599879
         ./build_luajit_android.sh || true
 
-    - name: Unzip and Clean CMake Arguments
+    - name: Unzip and Clean Malformed CMake Arguments
       run: |
         unzip -q android.zip
         python3 -c '
         import os, re
-        for root, dirs, files in os.walk("."):
-            for file in files:
-                if any(p in root for p in [".git", "build", ".gradle", ".cxx"]):
-                    continue
-                filepath = os.path.join(root, file)
-                try:
-                    with open(filepath, "r", encoding="utf-8", errors="ignore") as f:
-                        content = f.read()
-                    
-                    if "VCPKG" in content:
-                        new_content = re.sub(r"VCPKG[^\s,\"]*", "", content, flags=re.IGNORECASE)
-                        # Limpiamos residuos de guiones sueltos o espacios múltiples en argumentos
-                        new_content = re.sub(r"\s+-D\s+", " ", new_content)
-                        if new_content != content:
-                            with open(filepath, "w", encoding="utf-8") as f:
-                                f.write(new_content)
-                            print(f"Cleaned residual flags in: {filepath}")
-                except Exception:
-                    pass
+        target_file = "android/app/build.gradle"
+        if os.path.exists(target_file):
+            with open(target_file, "r", encoding="utf-8", errors="ignore") as f:
+                content = f.read()
+            
+            # Limpiamos banderas de vcpkg y cualquier residuo de guiones sueltos en los argumentos de CMake
+            content = re.sub(r"VCPKG[^\s,\"]*", "", content, flags=re.IGNORECASE)
+            content = re.sub(r"\"\s*-D\s*\"", "\"\"", content)
+            content = re.sub(r"\s+-D\s*(\s|\})", r"\1", content)
+            
+            with open(target_file, "w", encoding="utf-8") as f:
+                f.write(content)
+            print("Successfully cleaned CMake arguments in android/app/build.gradle")
         '
 
     - name: Build Android APK with Gradle
