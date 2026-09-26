@@ -39,12 +39,7 @@ jobs:
         unzip android.zip
         cd android
         chmod +x gradlew
-        ./gradlew assembleDebug || BUILD_FAILED=true
-        if [ "$BUILD_FAILED" = true ]; then
-          echo "=== BUSCANDO REGISTROS DE ERROR DE CMAKE ==="
-          find . -name "CMakeError.log" -o -name "*.log" -exec echo "--- {} ---" \; -exec cat {} \;
-          exit 1
-        fi
+        ./gradlew assembleDebug -DVCPKG_MANIFEST_INSTALL=OFF
 
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
