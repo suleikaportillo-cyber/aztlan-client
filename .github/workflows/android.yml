@@ -18,14 +18,9 @@ jobs:
       with:
         java-version: '17'
         distribution: 'temurin'
-        cache: 'gradle'
 
     - name: Setup Android SDK
       uses: android-actions/setup-android@v3
-
-    - name: Install NDK and CMake
-      run: |
-        sdkmanager "ndk;25.1.8937393" "cmake;3.22.1"
 
     - name: Build Android APK with Gradle
       run: |
