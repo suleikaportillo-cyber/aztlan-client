@@ -34,27 +34,27 @@ jobs:
         export ANDROID_NDK_HOME=/usr/local/lib/android/sdk/ndk/29.0.13599879
         ./build_luajit_android.sh || true
 
-    - name: Unzip and Remove Vcpkg Arguments from Gradle
+    - name: Unzip and Globally Force Off Vcpkg Manifest
       run: |
         unzip -q android.zip
         python3 -c '
-        import os
-        target_file = "android/app/build.gradle"
-        if os.path.exists(target_file):
-            with open(target_file, "r", encoding="utf-8", errors="ignore") as f:
-                lines = f.readlines()
-            
-            new_lines = []
-            for line in lines:
-                # Omitimos cualquier línea que agregue argumentos de vcpkg que rompen la compilación en Android
-                if "VCPKG_MANIFEST_INSTALL" in line or "vcpkg.cmake" in line:
-                    print(f"Stripping line: {line.strip()}")
-                    continue
-                new_lines.append(line)
+        import glob, re
+        for filepath in glob.glob("**/*", recursive=True):
+            if any(p in filepath for p in [".git", "build", ".gradle", "node_modules"]):
+                continue
+            try:
+                with open(filepath, "r", encoding="utf-8", errors="ignore") as f:
+                    content = f.read()
                 
-            with open(target_file, "w", encoding="utf-8") as f:
-                f.writelines(new_lines)
-            print("Successfully stripped vcpkg flags from android/app/build.gradle")
+                # Reemplazo estricto usando expresiones regulares para apagar vcpkg manifest
+                new_content = re.sub(r"VCPKG_MANIFEST_INSTALL\s*=\s*ON", "VCPKG_MANIFEST_INSTALL=OFF", content, flags=re.IGNORECASE)
+                
+                if new_content != content:
+                    with open(filepath, "w", encoding="utf-8") as f:
+                        f.write(new_content)
+                    print(f"Patched globally: {filepath}")
+            except Exception:
+                pass
         '
 
     - name: Build Android APK with Gradle
