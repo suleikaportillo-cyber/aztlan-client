@@ -34,33 +34,31 @@ jobs:
         export ANDROID_NDK_HOME=/usr/local/lib/android/sdk/ndk/29.0.13599879
         ./build_luajit_android.sh || true
 
-    - name: Unzip and Overwrite External Native Build Arguments
+    - name: Unzip, Purge Cache and Clean CMake Arguments
       run: |
         unzip -q android.zip
+        rm -rf android/app/.cxx android/app/build android/.gradle
         python3 -c '
-        import os
+        import os, re
         target_file = "android/app/build.gradle"
         if os.path.exists(target_file):
             with open(target_file, "r", encoding="utf-8", errors="ignore") as f:
                 content = f.read()
             
-            # Reemplazamos todo el bloque de arguments de CMake para asegurarnos de limpiar vcpkg
-            if "externalNativeBuild" in content:
-                # Buscamos y limpiamos las referencias de vcpkg en los argumentos
-                cleaned = content.replace("VCPKG_TARGET_ANDROID=ON", "VCPKG_TARGET_ANDROID=OFF")
-                cleaned = cleaned.replace("VCPKG_MANIFEST_INSTALL=ON", "VCPKG_MANIFEST_INSTALL=OFF")
-                cleaned = cleaned.replace("-DVCPKG", "#-DVCPKG")
-                
-                with open(target_file, "w", encoding="utf-8") as f:
-                    f.write(cleaned)
-                print("Overwrote CMake arguments in android/app/build.gradle")
+            # Reemplazamos las banderas de vcpkg para que pasen apagadas
+            content = content.replace("VCPKG_MANIFEST_INSTALL=ON", "VCPKG_MANIFEST_INSTALL=OFF")
+            content = content.replace("VCPKG_TARGET_ANDROID=ON", "VCPKG_TARGET_ANDROID=OFF")
+            
+            with open(target_file, "w", encoding="utf-8") as f:
+                f.write(content)
+            print("Cleaned cache and patched android/app/build.gradle successfully.")
         '
 
     - name: Build Android APK with Gradle
       run: |
         cd android
         chmod +x gradlew
-        ./gradlew assembleDebug -Pandroid.injected.build.model.only=false
+        ./gradlew clean assembleDebug
 
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
