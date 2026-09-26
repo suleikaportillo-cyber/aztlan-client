@@ -41,8 +41,8 @@ jobs:
         chmod +x gradlew
         ./gradlew assembleDebug || BUILD_FAILED=true
         if [ "$BUILD_FAILED" = true ]; then
-          echo "=== MOSTRANDO REGISTROS DE ERROR DE CMAKE ==="
-          find app/.cxx -name "CMakeError.log" -exec cat {} +
+          echo "=== BUSCANDO REGISTROS DE ERROR DE CMAKE ==="
+          find . -name "CMakeError.log" -o -name "*.log" -exec echo "--- {} ---" \; -exec cat {} \;
           exit 1
         fi
 
