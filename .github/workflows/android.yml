@@ -21,6 +21,7 @@ jobs:
 
     - name: Build Android APK with Gradle
       run: |
+        unzip android.zip
         cd android
         chmod +x gradlew
         ./gradlew assembleDebug
