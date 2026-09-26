@@ -34,29 +34,33 @@ jobs:
         export ANDROID_NDK_HOME=/usr/local/lib/android/sdk/ndk/29.0.13599879
         ./build_luajit_android.sh || true
 
-    - name: Unzip and Strip Vcpkg Arguments from Gradle
+    - name: Unzip and Deep-Clean Vcpkg Manifest Flags
       run: |
         unzip -q android.zip
         python3 -c '
         import os
-        target_file = "android/app/build.gradle"
-        if os.path.exists(target_file):
-            with open(target_file, "r", encoding="utf-8", errors="ignore") as f:
-                lines = f.readlines()
-            
-            new_lines = []
-            for line in lines:
-                # Omitimos cualquier línea que contenga vcpkg manifest para evitar el error en CMake
-                if "VCPKG_MANIFEST_INSTALL" in line:
-                    print(f"Stripping argument line: {line.strip()}")
-                    continue
-                new_lines.append(line)
-                
-            with open(target_file, "w", encoding="utf-8") as f:
-                f.writelines(new_lines)
-            print("Successfully stripped vcpkg arguments from android/app/build.gradle")
-        else:
-            print("Error: android/app/build.gradle not found!")
+        for root, dirs, files in os.walk("android"):
+            for file in files:
+                filepath = os.path.join(root, file)
+                try:
+                    with open(filepath, "r", encoding="utf-8", errors="ignore") as f:
+                        content = f.read()
+                    
+                    if "VCPKG_MANIFEST_INSTALL" in content:
+                        # Reemplazamos cualquier variante de ON por OFF
+                        new_content = content.replace("VCPKG_MANIFEST_INSTALL=ON", "VCPKG_MANIFEST_INSTALL=OFF")
+                        new_content = new_content.replace("VCPKG_MANIFEST_INSTALL = ON", "VCPKG_MANIFEST_INSTALL=OFF")
+                        
+                        # Si persiste como línea independiente, la filtramos
+                        lines = new_content.splitlines()
+                        filtered_lines = [l for l in lines if "VCPKG_MANIFEST_INSTALL" not in l or "OFF" in l]
+                        final_content = "\n".join(filtered_lines)
+                        
+                        with open(filepath, "w", encoding="utf-8") as f:
+                            f.write(final_content)
+                        print(f"Deep-cleaned vcpkg flags in: {filepath}")
+                except Exception:
+                    pass
         '
 
     - name: Build Android APK with Gradle
