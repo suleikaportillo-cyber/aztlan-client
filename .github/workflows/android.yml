@@ -34,20 +34,23 @@ jobs:
         export ANDROID_NDK_HOME=/usr/local/lib/android/sdk/ndk/29.0.13599879
         ./build_luajit_android.sh || true
 
-    - name: Unzip and Patch CMake Settings
+    - name: Unzip and Force Patch App Gradle Settings
       run: |
         unzip -q android.zip
         python3 -c '
-        import glob
-        for filepath in glob.glob("android/**/CMakeLists.txt", recursive=True) + glob.glob("CMakeLists.txt"):
-            with open(filepath, "r", encoding="utf-8", errors="ignore") as f:
+        import os
+        target_file = "android/app/build.gradle"
+        if os.path.exists(target_file):
+            with open(target_file, "r", encoding="utf-8", errors="ignore") as f:
                 content = f.read()
-            if "VCPKG_MANIFEST_INSTALL" in content:
-                content = content.replace("VCPKG_MANIFEST_INSTALL=ON", "VCPKG_MANIFEST_INSTALL=OFF")
-                content = content.replace("ON", "OFF") # Cobertura total por si acaso
-                with open(filepath, "w", encoding="utf-8") as f:
-                    f.write(content)
-                print(f"Patched CMakeLists: {filepath}")
+            # Reemplazamos cualquier instancia de vcpkg manifest ON por OFF
+            content = content.replace("VCPKG_MANIFEST_INSTALL=ON", "VCPKG_MANIFEST_INSTALL=OFF")
+            content = content.replace("vcpkg.cmake", "") # Limpiamos integraciones problemáticas si es necesario
+            with open(target_file, "w", encoding="utf-8") as f:
+                f.write(content)
+            print("Successfully patched android/app/build.gradle")
+        else:
+            print("Warning: android/app/build.gradle not found!")
         '
 
     - name: Build Android APK with Gradle
