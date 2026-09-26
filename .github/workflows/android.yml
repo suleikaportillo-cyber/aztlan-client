@@ -34,7 +34,7 @@ jobs:
         export ANDROID_NDK_HOME=/usr/local/lib/android/sdk/ndk/29.0.13599879
         ./build_luajit_android.sh || true
 
-    - name: Unzip and Global Purge of Vcpkg Flags
+    - name: Unzip and Clean CMake Arguments
       run: |
         unzip -q android.zip
         python3 -c '
@@ -50,10 +50,12 @@ jobs:
                     
                     if "VCPKG" in content:
                         new_content = re.sub(r"VCPKG[^\s,\"]*", "", content, flags=re.IGNORECASE)
+                        # Limpiamos residuos de guiones sueltos o espacios múltiples en argumentos
+                        new_content = re.sub(r"\s+-D\s+", " ", new_content)
                         if new_content != content:
                             with open(filepath, "w", encoding="utf-8") as f:
                                 f.write(new_content)
-                            print(f"Purged VCPKG flags in: {filepath}")
+                            print(f"Cleaned residual flags in: {filepath}")
                 except Exception:
                     pass
         '
