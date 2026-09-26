@@ -34,7 +34,7 @@ jobs:
         export ANDROID_NDK_HOME=/usr/local/lib/android/sdk/ndk/29.0.13599879
         ./build_luajit_android.sh || true
 
-    - name: Unzip and Clean Malformed CMake Arguments
+    - name: Unzip and Sanitize CMake Arguments in Gradle
       run: |
         unzip -q android.zip
         python3 -c '
@@ -44,14 +44,22 @@ jobs:
             with open(target_file, "r", encoding="utf-8", errors="ignore") as f:
                 content = f.read()
             
-            # Limpiamos banderas de vcpkg y cualquier residuo de guiones sueltos en los argumentos de CMake
-            content = re.sub(r"VCPKG[^\s,\"]*", "", content, flags=re.IGNORECASE)
-            content = re.sub(r"\"\s*-D\s*\"", "\"\"", content)
-            content = re.sub(r"\s+-D\s*(\s|\})", r"\1", content)
+            # Función para filtrar los argumentos de CMake y remover cualquier rastro de VCPKG
+            def sanitize_arguments(match):
+                line = match.group(0)
+                # Dividimos por comas para aislar cada argumento
+                parts = line.split(",")
+                clean_parts = [p for p in parts if "VCPKG" not in p.upper()]
+                return ",".join(clean_parts)
+
+            # Aplicamos la limpieza en las líneas de argumentos de CMake
+            content = re.sub(r"arguments\s+.*", sanitize_arguments, content)
             
             with open(target_file, "w", encoding="utf-8") as f:
                 f.write(content)
-            print("Successfully cleaned CMake arguments in android/app/build.gradle")
+            print("Successfully sanitized CMake arguments in android/app/build.gradle")
+        else:
+            print("Warning: android/app/build.gradle not found!")
         '
 
     - name: Build Android APK with Gradle
