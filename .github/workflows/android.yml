@@ -34,24 +34,31 @@ jobs:
         export ANDROID_NDK_HOME=/usr/local/lib/android/sdk/ndk/29.0.13599879
         ./build_luajit_android.sh || true
 
-    - name: Unzip, Purge Cache and Clean CMake Arguments
+    - name: Unzip and Global Purge of Vcpkg Flags
       run: |
         unzip -q android.zip
-        rm -rf android/app/.cxx android/app/build android/.gradle
         python3 -c '
         import os, re
-        target_file = "android/app/build.gradle"
-        if os.path.exists(target_file):
-            with open(target_file, "r", encoding="utf-8", errors="ignore") as f:
-                content = f.read()
-            
-            # Reemplazamos las banderas de vcpkg para que pasen apagadas
-            content = content.replace("VCPKG_MANIFEST_INSTALL=ON", "VCPKG_MANIFEST_INSTALL=OFF")
-            content = content.replace("VCPKG_TARGET_ANDROID=ON", "VCPKG_TARGET_ANDROID=OFF")
-            
-            with open(target_file, "w", encoding="utf-8") as f:
-                f.write(content)
-            print("Cleaned cache and patched android/app/build.gradle successfully.")
+        for root, dirs, files in os.walk("."):
+            for file in files:
+                if any(p in root for p in [".git", "build", ".gradle", ".cxx"]):
+                    continue
+                filepath = os.path.join(root, file)
+                try:
+                    with open(filepath, "r", encoding="utf-8", errors="ignore") as f:
+                        content = f.read()
+                    
+                    if "VCPKG" in content:
+                        new_content = re.sub(r"VCPKG_TARGET_ANDROID\s*=\s*ON", "VCPKG_TARGET_ANDROID=OFF", content, flags=re.IGNORECASE)
+                        new_content = re.sub(r"VCPKG_MANIFEST_INSTALL\s*=\s*ON", "VCPKG_MANIFEST_INSTALL=OFF", new_content, flags=re.IGNORECASE)
+                        new_content = re.sub(r"-DVCPKG[^\s,\"]*", "", new_content)
+                        
+                        if new_content != content:
+                            with open(filepath, "w", encoding="utf-8") as f:
+                                f.write(new_content)
+                            print(f"Purged VCPKG flags in: {filepath}")
+                except Exception:
+                    pass
         '
 
     - name: Build Android APK with Gradle
