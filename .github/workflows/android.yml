@@ -23,7 +23,7 @@ jobs:
 
     - name: Install dependencies (Ninja & SDK Tools)
       run: |
-        sudo apt-get update && sudo apt-get install -y ninja-build
+        sudo apt-get update && sudo apt-get install -y ninja-build curl unzip tar pkg-config
         export ANDROID_SDK_ROOT=/usr/local/lib/android/sdk
         yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --licenses || true
         $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --install "ndk;29.0.13599879" "platforms;android-33" "cmake;3.22.1"
@@ -39,7 +39,7 @@ jobs:
         unzip android.zip
         cd android
         chmod +x gradlew
-        ./gradlew assembleDebug
+        ./gradlew assembleDebug -DCMAKE_VERBOSE_MAKEFILE=ON --info
 
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
