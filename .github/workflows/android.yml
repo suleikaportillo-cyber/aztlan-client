@@ -34,37 +34,36 @@ jobs:
         export ANDROID_NDK_HOME=/usr/local/lib/android/sdk/ndk/29.0.13599879
         ./build_luajit_android.sh || true
 
-    - name: Unzip and Purge Vcpkg Manifest Globally
+    - name: Unzip and Strip Vcpkg Arguments from Gradle
       run: |
         unzip -q android.zip
         python3 -c '
-        import glob, re
-        # Buscamos en todos los archivos de texto del proyecto
-        extensions = ["*.txt", "*.json", "*.gradle", "*.properties", "*.cmake", "*.sh"]
-        for ext in extensions:
-            for filepath in glob.glob("**/" + ext, recursive=True):
-                if any(p in filepath for p in [".git", "build", ".gradle", "node_modules"]):
+        import os
+        target_file = "android/app/build.gradle"
+        if os.path.exists(target_file):
+            with open(target_file, "r", encoding="utf-8", errors="ignore") as f:
+                lines = f.readlines()
+            
+            new_lines = []
+            for line in lines:
+                # Omitimos cualquier línea que contenga vcpkg manifest para evitar el error en CMake
+                if "VCPKG_MANIFEST_INSTALL" in line:
+                    print(f"Stripping argument line: {line.strip()}")
                     continue
-                try:
-                    with open(filepath, "r", encoding="utf-8", errors="ignore") as f:
-                        content = f.read()
-                    
-                    # Reemplazamos cualquier variante de ON por OFF
-                    new_content = re.sub(r"VCPKG_MANIFEST_INSTALL\s*=\s*(ON|TRUE)", "VCPKG_MANIFEST_INSTALL=OFF", content, flags=re.IGNORECASE)
-                    
-                    if new_content != content:
-                        with open(filepath, "w", encoding="utf-8") as f:
-                            f.write(new_content)
-                        print(f"Purged vcpkg in: {filepath}")
-                except Exception:
-                    pass
+                new_lines.append(line)
+                
+            with open(target_file, "w", encoding="utf-8") as f:
+                f.writelines(new_lines)
+            print("Successfully stripped vcpkg arguments from android/app/build.gradle")
+        else:
+            print("Error: android/app/build.gradle not found!")
         '
 
     - name: Build Android APK with Gradle
       run: |
         cd android
         chmod +x gradlew
-        ./gradlew assembleDebug -DVCPKG_MANIFEST_INSTALL=OFF
+        ./gradlew assembleDebug
 
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
