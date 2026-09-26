@@ -19,18 +19,19 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    - name: Accept Licenses and Install NDK
+    - name: Install dependencies (Ninja & SDK Tools)
       run: |
+        sudo apt-get update && sudo apt-get install -y ninja-build
         export ANDROID_SDK_ROOT=/usr/local/lib/android/sdk
         yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --licenses || true
-        $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --install "ndk;29.0.13599879" "platforms;android-33"
+        $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --install "ndk;29.0.13599879" "platforms;android-33" "cmake;3.22.1"
 
     - name: Build Android APK with Gradle
       run: |
         unzip android.zip
         cd android
         chmod +x gradlew
-        ./gradlew assembleDebug
+        ./gradlew assembleDebug --info
 
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
